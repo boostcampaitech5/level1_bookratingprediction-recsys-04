@@ -8,8 +8,27 @@ from src.data import image_data_load, image_data_split, image_data_loader
 from src.data import text_data_load, text_data_split, text_data_loader
 from src.train import train, test
 
+from surprise import Reader
+from surprise.dataset import DatasetAutoFolds
+
+# wandb import
+import wandb
+
 
 def main(args):
+    # wandb init
+    user_or_team = 'recsys_04_level1'
+    project = 'Book-RecSys-Level1'
+    display_name = args.model
+
+    wandb.init(project=project, entity=user_or_team, name=display_name, config=args.__dict__)
+
+    # wandb run naming
+    setting = Setting()
+    filename = setting.get_submit_filename(args)
+    wandb.run.name = filename.split('/')[2].split('.')[0]
+    wandb.run.save()
+
     Setting.seed_everything(args.seed)
 
 
@@ -25,6 +44,8 @@ def main(args):
         import nltk
         nltk.download('punkt')
         data = text_data_load(args)
+    elif args.model == 'SVD':
+        data = context_data_load(args)
     else:
         pass
 
@@ -46,18 +67,26 @@ def main(args):
     elif args.model=='DeepCoNN':
         data = text_data_split(args, data)
         data = text_data_loader(args, data)
+    elif args.model=='SVD':
+        reader = Reader(rating_scale=(1, 10))
+        data = context_data_split(args, data)
+        train_fold = DatasetAutoFolds(df=pd.concat(data['X_train']['user_id','isbn'],data['y_train']),reader=reader)
+        train_data = train_fold.build_full_trainset()
+        test_data = list(zip(data['X_test']['user_id'],data['X_test']['isbn'],data['y_test']))
     else:
         pass
 
     ####################### Setting for Log
-    setting = Setting()
+
+    # setting = Setting()
+    
+    # filename = setting.get_submit_filename(args)
 
     log_path = setting.get_log_path(args)
     setting.make_dir(log_path)
 
     logger = Logger(args, log_path)
     logger.save_args()
-
 
     ######################## Model
     print(f'--------------- INIT {args.model} ---------------')
@@ -66,24 +95,31 @@ def main(args):
 
     ######################## TRAIN
     print(f'--------------- {args.model} TRAINING ---------------')
-    model = train(args, model, data, logger, setting)
+    if args.model == 'SVD':
+        model.fit(train_data)
+    else:
+        model = train(args, model, data, logger, setting)
 
 
     ######################## INFERENCE
     print(f'--------------- {args.model} PREDICT ---------------')
-    predicts = test(args, model, data, setting)
+    if args.model == 'SVD':
+        predicts = model(test_data)
+    else:
+        predicts = test(args, model, data, setting)
 
 
     ######################## SAVE PREDICT
     print(f'--------------- SAVE {args.model} PREDICT ---------------')
     submission = pd.read_csv(args.data_path + 'sample_submission.csv')
-    if args.model in ('FM', 'FFM', 'NCF', 'WDN', 'DCN', 'CNN_FM', 'DeepCoNN'):
+    if args.model in ('FM', 'FFM','SVD', 'NCF', 'WDN', 'DCN', 'CNN_FM', 'DeepCoNN'):
         submission['rating'] = predicts
     else:
         pass
 
-    filename = setting.get_submit_filename(args)
     submission.to_csv(filename, index=False)
+
+
 
 
 if __name__ == "__main__":
@@ -97,10 +133,10 @@ if __name__ == "__main__":
     ############### BASIC OPTION
     arg('--data_path', type=str, default='/opt/ml/data/', help='Data path를 설정할 수 있습니다.')
     arg('--saved_model_path', type=str, default='./saved_models', help='Saved Model path를 설정할 수 있습니다.')
-    arg('--model', type=str, choices=['FM', 'FFM', 'NCF', 'WDN', 'DCN', 'CNN_FM', 'DeepCoNN'],
+    arg('--model', type=str, choices=['FM', 'FFM', 'NCF', 'WDN', 'DCN', 'CNN_FM', 'DeepCoNN', 'SVD'],
                                 help='학습 및 예측할 모델을 선택할 수 있습니다.')
     arg('--data_shuffle', type=bool, default=True, help='데이터 셔플 여부를 조정할 수 있습니다.')
-    arg('--test_size', type=float, default=0.2, help='Train/Valid split 비율을 조정할 수 있습니다.')
+    arg('--test_size', type=float, default=0.2, help='Train0/Valid split 비율을 조정할 수 있습니다.')
     arg('--seed', type=int, default=42, help='seed 값을 조정할 수 있습니다.')
     arg('--use_best_model', type=bool, default=True, help='검증 성능이 가장 좋은 모델 사용여부를 설정할 수 있습니다.')
 
@@ -142,6 +178,8 @@ if __name__ == "__main__":
     arg('--word_dim', type=int, default=768, help='DEEP_CONN에서 1D conv의 입력 크기를 조정할 수 있습니다.')
     arg('--out_dim', type=int, default=32, help='DEEP_CONN에서 1D conv의 출력 크기를 조정할 수 있습니다.')
 
+    ############### preprocessed books
+    arg('--books', type=bool, default=True, help='preprocessing이 진행된 books dataframe을 사용한다.')
 
     args = parser.parse_args()
     main(args)

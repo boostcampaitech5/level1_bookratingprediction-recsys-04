@@ -16,14 +16,14 @@ import wandb
 
 
 def main(args):
-    # wandb init
+    ######################### wandb init
     user_or_team = 'recsys_04_level1'
     project = 'Book-RecSys-Level1'
     display_name = args.model
 
     wandb.init(project=project, entity=user_or_team, name=display_name, config=args.__dict__)
 
-    # wandb run naming
+    ######################### wandb run naming
     setting = Setting()
     filename = setting.get_submit_filename(args)
     wandb.run.name = filename.split('/')[2].split('.')[0]
@@ -77,10 +77,6 @@ def main(args):
         pass
 
     ####################### Setting for Log
-
-    # setting = Setting()
-    
-    # filename = setting.get_submit_filename(args)
 
     log_path = setting.get_log_path(args)
     setting.make_dir(log_path)

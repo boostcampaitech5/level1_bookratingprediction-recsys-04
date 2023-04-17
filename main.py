@@ -34,7 +34,7 @@ def main(args):
 
     ######################## DATA LOAD
     print(f'--------------- {args.model} Load Data ---------------')
-    if args.model in ('FM', 'FFM'):
+    if args.model in ('FM', 'FFM', 'XGBoost'):
         data = context_data_load(args)
     elif args.model in ('NCF', 'WDN', 'DCN'):
         data = dl_data_load(args)
@@ -52,10 +52,9 @@ def main(args):
 
     ######################## Train/Valid Split
     print(f'--------------- {args.model} Train/Valid Split ---------------')
-    if args.model in ('FM', 'FFM'):
+    if args.model in ('FM', 'FFM' , 'XGBoost'):
         data = context_data_split(args, data)
         data = context_data_loader(args, data)
-
     elif args.model in ('NCF', 'WDN', 'DCN'):
         data = dl_data_split(args, data)
         data = dl_data_loader(args, data)
@@ -67,12 +66,6 @@ def main(args):
     elif args.model=='DeepCoNN':
         data = text_data_split(args, data)
         data = text_data_loader(args, data)
-    elif args.model=='SVD':
-        reader = Reader(rating_scale=(1, 10))
-        data = context_data_split(args, data)
-        train_fold = DatasetAutoFolds(df=pd.concat(data['X_train']['user_id','isbn'],data['y_train']),reader=reader)
-        train_data = train_fold.build_full_trainset()
-        test_data = list(zip(data['X_test']['user_id'],data['X_test']['isbn'],data['y_test']))
     else:
         pass
 
@@ -88,27 +81,26 @@ def main(args):
     print(f'--------------- INIT {args.model} ---------------')
     model = models_load(args,data)
 
-
     ######################## TRAIN
     print(f'--------------- {args.model} TRAINING ---------------')
-    if args.model == 'SVD':
-        model.fit(train_data)
-    else:
+    if args.model == 'XGBoost':
+        model.train()
+    else: 
         model = train(args, model, data, logger, setting)
 
 
     ######################## INFERENCE
     print(f'--------------- {args.model} PREDICT ---------------')
-    if args.model == 'SVD':
-        predicts = model(test_data)
-    else:
+    if args.model == 'XGBoost':
+        predicts = model.pred(data['test'])
+    else: 
         predicts = test(args, model, data, setting)
 
 
     ######################## SAVE PREDICT
     print(f'--------------- SAVE {args.model} PREDICT ---------------')
     submission = pd.read_csv(args.data_path + 'sample_submission.csv')
-    if args.model in ('FM', 'FFM','SVD', 'NCF', 'WDN', 'DCN', 'CNN_FM', 'DeepCoNN'):
+    if args.model in ('FM', 'FFM','XGBoost', 'NCF', 'WDN', 'DCN', 'CNN_FM', 'DeepCoNN'):
         submission['rating'] = predicts
     else:
         pass
@@ -129,7 +121,7 @@ if __name__ == "__main__":
     ############### BASIC OPTION
     arg('--data_path', type=str, default='/opt/ml/data/', help='Data path를 설정할 수 있습니다.')
     arg('--saved_model_path', type=str, default='./saved_models', help='Saved Model path를 설정할 수 있습니다.')
-    arg('--model', type=str, choices=['FM', 'FFM', 'NCF', 'WDN', 'DCN', 'CNN_FM', 'DeepCoNN', 'SVD'],
+    arg('--model', type=str, choices=['FM', 'FFM', 'NCF', 'WDN', 'DCN', 'CNN_FM', 'DeepCoNN', 'XGBoost'],
                                 help='학습 및 예측할 모델을 선택할 수 있습니다.')
     arg('--data_shuffle', type=bool, default=True, help='데이터 셔플 여부를 조정할 수 있습니다.')
     arg('--test_size', type=float, default=0.2, help='Train0/Valid split 비율을 조정할 수 있습니다.')
@@ -149,16 +141,17 @@ if __name__ == "__main__":
     ############### GPU
     arg('--device', type=str, default='cuda', choices=['cuda', 'cpu'], help='학습에 사용할 Device를 조정할 수 있습니다.')
 
-
     ############### FM, FFM, NCF, WDN, DCN Common OPTION
     arg('--embed_dim', type=int, default=16, help='FM, FFM, NCF, WDN, DCN에서 embedding시킬 차원을 조정할 수 있습니다.')
     arg('--dropout', type=float, default=0.2, help='NCF, WDN, DCN에서 Dropout rate를 조정할 수 있습니다.')
     arg('--mlp_dims', type=list, default=(16, 16), help='NCF, WDN, DCN에서 MLP Network의 차원을 조정할 수 있습니다.')
 
+    ############### XGBoost OPTION  
+    arg('--num_boost_round', type=int, default=1000, help='XGBoost 부스팅 라운드 수를 조정 할 수 있습니다.')
+    # arg('--cv_xgboost', type=bool, default=False, help='XGBoost의 교차 검증 여부를 선택합니다')
 
     ############### DCN
     arg('--num_layers', type=int, default=3, help='에서 Cross Network의 레이어 수를 조정할 수 있습니다.')
-
 
     ############### CNN_FM
     arg('--cnn_embed_dim', type=int, default=64, help='CNN_FM에서 user와 item에 대한 embedding시킬 차원을 조정할 수 있습니다.')

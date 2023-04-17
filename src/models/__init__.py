@@ -5,4 +5,5 @@ from .WDN.WDN_model import WideAndDeepModel
 from .DCN.DCN_model import DeepCrossNetworkModel
 from .CNN_FM.CNN_FM_model import CNN_FM
 from .DeepCoNN.DeepCoNN_model import DeepCoNN
+from .GBM.XGBoost_model import XGBoost
 # from .SVD.SVD_models import SingularValueDecomposition

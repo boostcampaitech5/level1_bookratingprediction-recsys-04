@@ -38,6 +38,12 @@ def models_load(args, data):
         model = FactorizationMachineModel(args, data).to(args.device)
     elif args.model=='FFM':
         model = FieldAwareFactorizationMachineModel(args, data).to(args.device)
+    elif args.model=='LGBM':
+        model = LGBM(args,data)
+    elif args.model=='CatBoost':
+        model = CatBoost(args,data)
+    elif args.model=='XGBoost':
+        model = XGBoost(args, data)
     elif args.model=='NCF':
         model = NeuralCollaborativeFiltering(args, data).to(args.device)
     elif args.model=='WDN':

@@ -7,6 +7,9 @@ from src.data import dl_data_load, dl_data_split, dl_data_loader
 from src.data import image_data_load, image_data_split, image_data_loader
 from src.data import text_data_load, text_data_split, text_data_loader
 from src.train import train, test
+import json
+
+from test_answer import test_rmse
 
 from surprise import Reader
 from surprise.dataset import DatasetAutoFolds
@@ -34,7 +37,7 @@ def main(args):
 
     ######################## DATA LOAD
     print(f'--------------- {args.model} Load Data ---------------')
-    if args.model in ('FM', 'FFM', 'XGBoost'):
+    if args.model in ('FM', 'FFM', 'XGBoost','CatBoost'):
         data = context_data_load(args)
     elif args.model in ('NCF', 'WDN', 'DCN'):
         data = dl_data_load(args)
@@ -52,7 +55,7 @@ def main(args):
 
     ######################## Train/Valid Split
     print(f'--------------- {args.model} Train/Valid Split ---------------')
-    if args.model in ('FM', 'FFM' , 'XGBoost'):
+    if args.model in ('FM', 'FFM' , 'XGBoost','CatBoost'):
         data = context_data_split(args, data)
         data = context_data_loader(args, data)
     elif args.model in ('NCF', 'WDN', 'DCN'):
@@ -81,9 +84,18 @@ def main(args):
     print(f'--------------- INIT {args.model} ---------------')
     model = models_load(args,data)
 
+    ######################## Hyperparameter Tuning - Bayesian Search
+    if args.hyper_tuning:
+        best_param = model.hyperparameter_tuning()
+
+        with open('/opt/ml/code/best_param/'+filename.split('/')[2], 'w') as file:
+            json_string = json.dumps(best_param, default=lambda o: o.__dict__, sort_keys=True, indent=2)
+            file.write(json_string)
+        return
+
     ######################## TRAIN
     print(f'--------------- {args.model} TRAINING ---------------')
-    if args.model == 'XGBoost':
+    if args.model in ('XGBoost','CatBoost'):
         model.train()
     else: 
         model = train(args, model, data, logger, setting)
@@ -91,23 +103,26 @@ def main(args):
 
     ######################## INFERENCE
     print(f'--------------- {args.model} PREDICT ---------------')
-    if args.model == 'XGBoost':
+    if args.model in ('XGBoost','CatBoost'):
         predicts = model.pred(data['test'])
     else: 
         predicts = test(args, model, data, setting)
 
 
+    ######################### Test Eval
+    print(f'--------------- {args.model} TEST EVAL APPROXIMATE ---------------')
+    test_loss = test_rmse(predicts)
+    print("Test RMSE Loss (+0.3 ~ 0.4)= ", test_loss)
+
     ######################## SAVE PREDICT
     print(f'--------------- SAVE {args.model} PREDICT ---------------')
     submission = pd.read_csv(args.data_path + 'sample_submission.csv')
-    if args.model in ('FM', 'FFM','XGBoost', 'NCF', 'WDN', 'DCN', 'CNN_FM', 'DeepCoNN'):
+    if args.model in ('FM', 'FFM','XGBoost','CatBoost', 'NCF', 'WDN', 'DCN', 'CNN_FM', 'DeepCoNN'):
         submission['rating'] = predicts
     else:
         pass
-
+    print("Output File :",filename)
     submission.to_csv(filename, index=False)
-
-
 
 
 if __name__ == "__main__":
@@ -121,12 +136,14 @@ if __name__ == "__main__":
     ############### BASIC OPTION
     arg('--data_path', type=str, default='/opt/ml/data/', help='Data path를 설정할 수 있습니다.')
     arg('--saved_model_path', type=str, default='./saved_models', help='Saved Model path를 설정할 수 있습니다.')
-    arg('--model', type=str, choices=['FM', 'FFM', 'NCF', 'WDN', 'DCN', 'CNN_FM', 'DeepCoNN', 'XGBoost'],
+    arg('--model', type=str, choices=['FM', 'FFM', 'NCF', 'WDN', 'DCN', 'CNN_FM', 'DeepCoNN', 'XGBoost', 'CatBoost'],
                                 help='학습 및 예측할 모델을 선택할 수 있습니다.')
     arg('--data_shuffle', type=bool, default=True, help='데이터 셔플 여부를 조정할 수 있습니다.')
     arg('--test_size', type=float, default=0.2, help='Train0/Valid split 비율을 조정할 수 있습니다.')
     arg('--seed', type=int, default=42, help='seed 값을 조정할 수 있습니다.')
     arg('--use_best_model', type=bool, default=True, help='검증 성능이 가장 좋은 모델 사용여부를 설정할 수 있습니다.')
+
+    arg('--hyper_tuning', type=bool, default=False, help='베이지안 탐색을 통한 hyperparameter tuning')
 
 
     ############### TRAINING OPTION
@@ -149,6 +166,8 @@ if __name__ == "__main__":
     ############### XGBoost OPTION  
     arg('--num_boost_round', type=int, default=1000, help='XGBoost 부스팅 라운드 수를 조정 할 수 있습니다.')
     # arg('--cv_xgboost', type=bool, default=False, help='XGBoost의 교차 검증 여부를 선택합니다')
+    arg('--reg', type=bool, default=True, help='XGBoost의 reg 모델 고르기')
+
 
     ############### DCN
     arg('--num_layers', type=int, default=3, help='에서 Cross Network의 레이어 수를 조정할 수 있습니다.')

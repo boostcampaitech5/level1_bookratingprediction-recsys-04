@@ -37,7 +37,7 @@ def main(args):
 
     ######################## DATA LOAD
     print(f'--------------- {args.model} Load Data ---------------')
-    if args.model in ('FM', 'FFM', 'XGBoost','CatBoost'):
+    if args.model in ('FM', 'FFM', 'XGBoost','CatBoost','LGBM'):
         data = context_data_load(args)
     elif args.model in ('NCF', 'WDN', 'DCN'):
         data = dl_data_load(args)
@@ -55,7 +55,7 @@ def main(args):
 
     ######################## Train/Valid Split
     print(f'--------------- {args.model} Train/Valid Split ---------------')
-    if args.model in ('FM', 'FFM' , 'XGBoost','CatBoost'):
+    if args.model in ('FM', 'FFM' , 'XGBoost','CatBoost','LGBM'):
         data = context_data_split(args, data)
         data = context_data_loader(args, data)
     elif args.model in ('NCF', 'WDN', 'DCN'):
@@ -95,7 +95,7 @@ def main(args):
 
     ######################## TRAIN
     print(f'--------------- {args.model} TRAINING ---------------')
-    if args.model in ('XGBoost','CatBoost'):
+    if args.model in ('XGBoost','CatBoost','LGBM'):
         model.train()
     else: 
         model = train(args, model, data, logger, setting)
@@ -103,7 +103,7 @@ def main(args):
 
     ######################## INFERENCE
     print(f'--------------- {args.model} PREDICT ---------------')
-    if args.model in ('XGBoost','CatBoost'):
+    if args.model in ('XGBoost','CatBoost','LGBM'):
         predicts = model.pred(data['test'])
     else: 
         predicts = test(args, model, data, setting)
@@ -117,7 +117,7 @@ def main(args):
     ######################## SAVE PREDICT
     print(f'--------------- SAVE {args.model} PREDICT ---------------')
     submission = pd.read_csv(args.data_path + 'sample_submission.csv')
-    if args.model in ('FM', 'FFM','XGBoost','CatBoost', 'NCF', 'WDN', 'DCN', 'CNN_FM', 'DeepCoNN'):
+    if args.model in ('FM', 'FFM','XGBoost','CatBoost', 'NCF', 'WDN', 'DCN', 'CNN_FM', 'DeepCoNN','LGBM'):
         submission['rating'] = predicts
     else:
         pass
@@ -136,7 +136,7 @@ if __name__ == "__main__":
     ############### BASIC OPTION
     arg('--data_path', type=str, default='/opt/ml/data/', help='Data path를 설정할 수 있습니다.')
     arg('--saved_model_path', type=str, default='./saved_models', help='Saved Model path를 설정할 수 있습니다.')
-    arg('--model', type=str, choices=['FM', 'FFM', 'NCF', 'WDN', 'DCN', 'CNN_FM', 'DeepCoNN', 'XGBoost', 'CatBoost'],
+    arg('--model', type=str, choices=['FM', 'FFM', 'NCF', 'WDN', 'DCN', 'CNN_FM', 'DeepCoNN', 'XGBoost', 'CatBoost','LGBM'],
                                 help='학습 및 예측할 모델을 선택할 수 있습니다.')
     arg('--data_shuffle', type=bool, default=True, help='데이터 셔플 여부를 조정할 수 있습니다.')
     arg('--test_size', type=float, default=0.2, help='Train0/Valid split 비율을 조정할 수 있습니다.')

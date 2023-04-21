@@ -197,4 +197,7 @@ saved_models
 submit
 wandb
 /data
+/best_param
+/catboost_info
+*.csv
 # End of https://www.toptal.com/developers/gitignore/api/visualstudiocode,python

@@ -9,7 +9,7 @@ from src.data import text_data_load, text_data_split, text_data_loader
 from src.train import train, test
 import json
 
-from test_answer import test_rmse
+from util.test_answer import test_rmse
 
 from surprise import Reader
 from surprise.dataset import DatasetAutoFolds
@@ -47,8 +47,6 @@ def main(args):
         import nltk
         nltk.download('punkt')
         data = text_data_load(args)
-    elif args.model == 'SVD':
-        data = context_data_load(args)
     else:
         pass
 
@@ -83,15 +81,6 @@ def main(args):
     ######################## Model
     print(f'--------------- INIT {args.model} ---------------')
     model = models_load(args,data)
-
-    ######################## Hyperparameter Tuning - Bayesian Search
-    if args.hyper_tuning:
-        best_param = model.hyperparameter_tuning()
-
-        with open('/opt/ml/code/best_param/'+filename.split('/')[2], 'w') as file:
-            json_string = json.dumps(best_param, default=lambda o: o.__dict__, sort_keys=True, indent=2)
-            file.write(json_string)
-        return
 
     ######################## TRAIN
     print(f'--------------- {args.model} TRAINING ---------------')
@@ -143,8 +132,6 @@ if __name__ == "__main__":
     arg('--seed', type=int, default=42, help='seed 값을 조정할 수 있습니다.')
     arg('--use_best_model', type=bool, default=True, help='검증 성능이 가장 좋은 모델 사용여부를 설정할 수 있습니다.')
 
-    arg('--hyper_tuning', type=bool, default=False, help='베이지안 탐색을 통한 hyperparameter tuning')
-
 
     ############### TRAINING OPTION
     arg('--batch_size', type=int, default=1024, help='Batch size를 조정할 수 있습니다.')
@@ -158,6 +145,7 @@ if __name__ == "__main__":
     ############### GPU
     arg('--device', type=str, default='cuda', choices=['cuda', 'cpu'], help='학습에 사용할 Device를 조정할 수 있습니다.')
 
+
     ############### FM, FFM, NCF, WDN, DCN Common OPTION
     arg('--embed_dim', type=int, default=16, help='FM, FFM, NCF, WDN, DCN에서 embedding시킬 차원을 조정할 수 있습니다.')
     arg('--dropout', type=float, default=0.2, help='NCF, WDN, DCN에서 Dropout rate를 조정할 수 있습니다.')
@@ -165,12 +153,10 @@ if __name__ == "__main__":
 
     ############### XGBoost OPTION  
     arg('--num_boost_round', type=int, default=1000, help='XGBoost 부스팅 라운드 수를 조정 할 수 있습니다.')
-    # arg('--cv_xgboost', type=bool, default=False, help='XGBoost의 교차 검증 여부를 선택합니다')
-    arg('--reg', type=bool, default=True, help='XGBoost의 reg 모델 고르기')
-
 
     ############### DCN
     arg('--num_layers', type=int, default=3, help='에서 Cross Network의 레이어 수를 조정할 수 있습니다.')
+
 
     ############### CNN_FM
     arg('--cnn_embed_dim', type=int, default=64, help='CNN_FM에서 user와 item에 대한 embedding시킬 차원을 조정할 수 있습니다.')

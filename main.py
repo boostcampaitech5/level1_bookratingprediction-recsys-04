@@ -9,7 +9,7 @@ from src.data import text_data_load, text_data_split, text_data_loader
 from src.train import train, test
 import json
 
-from .util.test_answer import test_rmse
+from util.test_answer import test_rmse
 
 from surprise import Reader
 from surprise.dataset import DatasetAutoFolds
@@ -82,15 +82,6 @@ def main(args):
     print(f'--------------- INIT {args.model} ---------------')
     model = models_load(args,data)
 
-    ######################## Hyperparameter Tuning - Bayesian Search
-    if args.hyper_tuning:
-        best_param = model.hyperparameter_tuning()
-
-        with open('/opt/ml/code/best_param/'+filename.split('/')[2], 'w') as file:
-            json_string = json.dumps(best_param, default=lambda o: o.__dict__, sort_keys=True, indent=2)
-            file.write(json_string)
-        return
-
     ######################## TRAIN
     print(f'--------------- {args.model} TRAINING ---------------')
     if args.model in ('XGBoost','CatBoost','LGBM'):
@@ -162,9 +153,6 @@ if __name__ == "__main__":
 
     ############### XGBoost OPTION  
     arg('--num_boost_round', type=int, default=1000, help='XGBoost 부스팅 라운드 수를 조정 할 수 있습니다.')
-    # arg('--cv_xgboost', type=bool, default=False, help='XGBoost의 교차 검증 여부를 선택합니다')
-    arg('--reg', type=bool, default=True, help='XGBoost의 reg 모델 고르기')
-
 
     ############### DCN
     arg('--num_layers', type=int, default=3, help='에서 Cross Network의 레이어 수를 조정할 수 있습니다.')
@@ -185,7 +173,7 @@ if __name__ == "__main__":
     arg('--out_dim', type=int, default=32, help='DEEP_CONN에서 1D conv의 출력 크기를 조정할 수 있습니다.')
 
     ############### preprocessed books
-    arg('--books', type=bool, default=False, help='preprocessing이 진행된 books dataframe을 사용한다.')
+    arg('--books', type=bool, default=True, help='preprocessing이 진행된 books dataframe을 사용한다.')
 
     args = parser.parse_args()
     main(args)

@@ -13,7 +13,6 @@ class XGBoost():
         self.dataloader(self.data)
         self.seed = args.seed
         self.num_boost_round = args.num_boost_round
-        self.reg = args.reg
         self.evals = [(data['X_valid'], data['y_valid'])]
 
     def dataloader(self,data):

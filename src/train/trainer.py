@@ -3,9 +3,7 @@ import tqdm
 import torch
 import torch.nn as nn
 from torch.nn import MSELoss
-from torch.optim import SGD, Adam
-
-import wandb
+from torch.optim import SGD, Adam, Adagrad
 
 
 class RMSELoss(nn.Module):
@@ -24,12 +22,20 @@ def train(args, model, dataloader, logger, setting):
         loss_fn = MSELoss()
     elif args.loss_fn == 'RMSE':
         loss_fn = RMSELoss()
+    ### 추가
+    elif args.loss_fn == 'Huber':
+        loss_fn = nn.SmoothL1Loss(beta=1.0)
+    ####
     else:
         pass
     if args.optimizer == 'SGD':
         optimizer = SGD(model.parameters(), lr=args.lr)
     elif args.optimizer == 'ADAM':
         optimizer = Adam(model.parameters(), lr=args.lr)
+    ### 추가
+    elif args.optimizer == 'Adagrad':
+        optimizer = Adagrad(model.parameters(), lr=args.lr)
+    ####
     else:
         pass
 
@@ -55,7 +61,6 @@ def train(args, model, dataloader, logger, setting):
         valid_loss = valid(args, model, dataloader, loss_fn)
         print(f'Epoch: {epoch+1}, Train_loss: {total_loss/batch:.3f}, valid_loss: {valid_loss:.3f}')
         logger.log(epoch=epoch+1, train_loss=total_loss/batch, valid_loss=valid_loss)
-        wandb.log({'epoch':epoch+1, 'train_loss':total_loss/batch, 'valid_loss':valid_loss})
         if minimum_loss > valid_loss:
             minimum_loss = valid_loss
             os.makedirs(args.saved_model_path, exist_ok=True)

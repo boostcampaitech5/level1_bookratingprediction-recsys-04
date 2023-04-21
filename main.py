@@ -9,7 +9,7 @@ from src.data import text_data_load, text_data_split, text_data_loader
 from src.train import train, test
 import json
 
-from test_answer import test_rmse
+from .util.test_answer import test_rmse
 
 from surprise import Reader
 from surprise.dataset import DatasetAutoFolds
@@ -143,8 +143,6 @@ if __name__ == "__main__":
     arg('--seed', type=int, default=42, help='seed 값을 조정할 수 있습니다.')
     arg('--use_best_model', type=bool, default=True, help='검증 성능이 가장 좋은 모델 사용여부를 설정할 수 있습니다.')
 
-    arg('--hyper_tuning', type=bool, default=False, help='베이지안 탐색을 통한 hyperparameter tuning')
-
 
     ############### TRAINING OPTION
     arg('--batch_size', type=int, default=1024, help='Batch size를 조정할 수 있습니다.')
@@ -157,6 +155,7 @@ if __name__ == "__main__":
 
     ############### GPU
     arg('--device', type=str, default='cuda', choices=['cuda', 'cpu'], help='학습에 사용할 Device를 조정할 수 있습니다.')
+
 
     ############### FM, FFM, NCF, WDN, DCN Common OPTION
     arg('--embed_dim', type=int, default=16, help='FM, FFM, NCF, WDN, DCN에서 embedding시킬 차원을 조정할 수 있습니다.')
@@ -171,6 +170,7 @@ if __name__ == "__main__":
 
     ############### DCN
     arg('--num_layers', type=int, default=3, help='에서 Cross Network의 레이어 수를 조정할 수 있습니다.')
+
 
     ############### CNN_FM
     arg('--cnn_embed_dim', type=int, default=64, help='CNN_FM에서 user와 item에 대한 embedding시킬 차원을 조정할 수 있습니다.')
@@ -187,7 +187,7 @@ if __name__ == "__main__":
     arg('--out_dim', type=int, default=32, help='DEEP_CONN에서 1D conv의 출력 크기를 조정할 수 있습니다.')
 
     ############### preprocessed books
-    arg('--books', type=bool, default=True, help='preprocessing이 진행된 books dataframe을 사용한다.')
+    arg('--books', type=bool, default=False, help='preprocessing이 진행된 books dataframe을 사용한다.')
 
     args = parser.parse_args()
     main(args)

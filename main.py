@@ -47,8 +47,6 @@ def main(args):
         import nltk
         nltk.download('punkt')
         data = text_data_load(args)
-    elif args.model == 'SVD':
-        data = context_data_load(args)
     else:
         pass
 

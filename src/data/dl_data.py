@@ -68,7 +68,6 @@ def dl_data_split(args, data):
             랜덤 seed 값
     ----------
     """
-
     X_train, X_valid, y_train, y_valid = train_test_split(
                                                         data['train'].drop(['rating'], axis=1),
                                                         data['train']['rating'],

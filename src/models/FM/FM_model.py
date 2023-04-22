@@ -37,6 +37,7 @@ class FactorizationMachine(nn.Module):
         super().__init__()
         self.reduce_sum = reduce_sum
 
+
     def forward(self, x: torch.Tensor):
         square_of_sum = torch.sum(x, dim=1) ** 2
         sum_of_square = torch.sum(x ** 2, dim=1)

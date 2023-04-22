@@ -7,6 +7,7 @@ import torch.nn as nn
 import logging
 import json
 from .models import *
+from xgboost import XGBRegressor
 
 def rmse(real: list, predict: list) -> float:
     '''
@@ -48,8 +49,10 @@ def models_load(args, data):
         model = CNN_FM(args, data).to(args.device)
     elif args.model=='DeepCoNN':
         model = DeepCoNN(args, data).to(args.device)
+    elif args.model=='XGBoost':
+        model = XGBRegressor(max_depth = args.max_depth, eta = args.eta, num_boost_around = args.num_boost_around, min_child_weight = args.min_child_weight)
     else:
-        raise ValueError('MODEL is not exist : select model in [FM,FFM,NCF,WDN,DCN,CNN_FM,DeepCoNN]')
+        raise ValueError('MODEL is not exist : select model in [FM,FFM,NCF,WDN,DCN,CNN_FM,DeepCoNN,XGBoost]')
     return model
 
 

@@ -7,6 +7,15 @@ from src.data import dl_data_load, dl_data_split, dl_data_loader
 from src.data import image_data_load, image_data_split, image_data_loader
 from src.data import text_data_load, text_data_split, text_data_loader
 from src.train import train, test
+from surprise import Reader
+from surprise.dataset import DatasetAutoFolds
+from sklearn.ensemble import *
+from sklearn.linear_model import *
+from sklearn.gaussian_process import *
+from sklearn.tree import *
+from catboost import CatBoostRegressor
+from xgboost import XGBRegressor
+import torch
 
 
 def main(args):
@@ -15,7 +24,7 @@ def main(args):
 
     ######################## DATA LOAD
     print(f'--------------- {args.model} Load Data ---------------')
-    if args.model in ('FM', 'FFM'):
+    if args.model in ('FM', 'FFM','XGBoost','CatBoost','RandomForestRegressor','ExtraTreesRegressor','HistGradientBoostingRegressor','HistGradientBoostingClassifier'):
         data = context_data_load(args)
     elif args.model in ('NCF', 'WDN', 'DCN'):
         data = dl_data_load(args)
@@ -25,8 +34,10 @@ def main(args):
         import nltk
         nltk.download('punkt')
         data = text_data_load(args)
+    elif args.model == 'SVD':
+        data = context_data_load(args)
     else:
-        pass
+        data = context_data_load(args)
 
 
     ######################## Train/Valid Split
@@ -46,8 +57,12 @@ def main(args):
     elif args.model=='DeepCoNN':
         data = text_data_split(args, data)
         data = text_data_loader(args, data)
+    
+    elif args.model in ('XGBoost','CatBoost','RandomForestRegressor','ExtraTreesRegressor','HistGradientBoostingRegressor','HistGradientBoostingRegressor'):
+        data = context_data_split(args, data)
+
     else:
-        pass
+        data = context_data_split(args, data)
 
     ####################### Setting for Log
     setting = Setting()
@@ -61,30 +76,135 @@ def main(args):
 
     ######################## Model
     print(f'--------------- INIT {args.model} ---------------')
-    model = models_load(args,data)
+    if(args.model == 'XGBoost'):
+        model = XGBRegressor(max_depth = 15, eta=0.1)
+    elif args.model == 'CatBoost':
+        model = CatBoostRegressor(iterations=10000,
+            learning_rate=0.05,
+            depth=6,
+            metric_period=1000,
+            random_seed=args.seed,
+            task_type="GPU",
+            devices='0',
+            od_type='Iter',
+            od_wait= 1000)
+    elif args.model == 'RandomForestRegressor':
+        model = RandomForestRegressor(max_depth=20)
+    elif args.model == 'ExtraTreesRegressor':
+        model = ExtraTreesRegressor(max_depth=20)
+    elif args.model == 'HistGradientBoostingRegressor':
+        model = HistGradientBoostingRegressor(max_depth=8, max_iter=10000, learning_rate=0.05)
+    elif args.model == 'AdaBoostRegressor':
+        model = AdaBoostRegressor()
+    elif args.model == 'BaggingRegressor':
+        from sklearn.svm import SVR
+        model = BaggingRegressor(SVR())
+    elif args.model == 'GradientBoostingRegressor':
+        model = GradientBoostingRegressor()
+    elif args.model == 'IsolationForest':
+        model = IsolationForest()
+    elif args.model == 'VotingRegressor':
+        model = VotingRegressor([('hg', HistGradientBoostingRegressor(max_depth=8, max_iter=10000, learning_rate=0.05)), 
+                                 ('rf',RandomForestRegressor(max_depth=20)),
+                                 ('ex',ExtraTreesRegressor(max_depth=20)),
+                                 ])
+        
+    elif args.model == 'StackingRegressor':
+        model = StackingRegressor([('hg', HistGradientBoostingRegressor(max_depth=8, max_iter=10000, learning_rate=0.05)), 
+                                 ('lr',LinearRegression()),
+                                 ('ex',ExtraTreesRegressor(max_depth=20)),
+                                 ],
+            final_estimator=(RandomForestRegressor(max_depth=20)))
+    elif args.model == 'GaussianProcessRegressor':
+        model = GaussianProcessRegressor()
+    elif args.model == 'LinearRegression':
+        model = LinearRegression()
+    elif args.model == 'SGDRegressor':
+        from sklearn.pipeline import make_pipeline
+        from sklearn.preprocessing import StandardScaler
+        model = make_pipeline(StandardScaler(), SGDRegressor(max_iter=1000, tol=1e-3))
+    elif args.model == 'ARDRegression':
+        model = ARDRegression()
+    elif args.model == 'BayesianRidge':
+        model = BayesianRidge()
+
+    elif args.model == 'DecisionTreeRegressor':
+        model = DecisionTreeRegressor(max_depth=10)
+    elif args.model == 'ExtraTreeRegressor':
+        model = ExtraTreeRegressor(max_depth=10)
+    else:
+        model = models_load(args,data)
+    
 
 
     ######################## TRAIN
     print(f'--------------- {args.model} TRAINING ---------------')
-    model = train(args, model, data, logger, setting)
+    if(args.model == 'XGBoost'):
+        model.fit(data['X_train'], data['y_train'],
+                  eval_set=[(data['X_valid'],data['y_valid'])])
+    elif args.model == 'CatBoost':
+        model.fit(data['X_train'],
+            data['y_train'],
+            eval_set=(data['X_valid'],data['y_valid']),
+            verbose=True)
+    elif args.model == 'RandomForestRegressor':
+        model.fit(data['X_train'], data['y_train'])
+    elif args.model == 'ExtraTreesRegressor':
+        model.fit(data['X_train'], data['y_train'])
+    elif args.model == 'HistGradientBoostingRegressor':
+        model.fit(data['X_train'], data['y_train'])
+    elif args.model == 'SVD':
+        model.fit(data['X_train'], data['y_train'])
+    elif args.model == 'HistGradientBoostingClassifier':
+        model.fit(data['X_train'], data['y_train'])
+    else:
+        model.fit(data['X_train'], data['y_train'])
+        
+    
 
+    
 
     ######################## INFERENCE
     print(f'--------------- {args.model} PREDICT ---------------')
-    predicts = test(args, model, data, setting)
+    if(args.model == 'XGBoost','CatBoost','RandomForestRegressor','ExtraTreesRegressor','HistGradientBoostingRegressor','HistGradientBoostingClassifier'):
+        predicts = model.predict(data['test'])
+        vaild_predicts = model.predict(data['X_valid'])
+        print(rmse(list(data['y_valid']), list(vaild_predicts)))
+    else:
+        predicts = model.predict(data['test'])
+        vaild_predicts = model.predict(data['X_valid'])
+        print(rmse(list(data['y_valid']), list(vaild_predicts)))
+        #predicts = test(args, model, data, setting)
 
 
     ######################## SAVE PREDICT
     print(f'--------------- SAVE {args.model} PREDICT ---------------')
     submission = pd.read_csv(args.data_path + 'sample_submission.csv')
-    if args.model in ('FM', 'FFM', 'NCF', 'WDN', 'DCN', 'CNN_FM', 'DeepCoNN'):
+    if args.model in ('FM', 'FFM', 'NCF', 'WDN', 'DCN', 'CNN_FM', 'DeepCoNN','XGBoost','SVD','CatBoost','RandomForestRegressor','ExtraTreesRegressor','HistGradientBoostingRegressor','HistGradientBoostingClassifier'):
         submission['rating'] = predicts
+
     else:
-        pass
+        submission['rating'] = predicts
+        #pass
 
     filename = setting.get_submit_filename(args)
     submission.to_csv(filename, index=False)
 
+import numpy as np
+def rmse(real: list, predict: list) -> float:
+    '''
+    [description]
+    RMSE를 계산하는 함수입니다.
+
+    [arguments]
+    real : 실제 값입니다.
+    predict : 예측 값입니다.
+
+    [return]
+    RMSE를 반환합니다.
+    '''
+    pred = np.array(predict)
+    return np.sqrt(np.mean((real-pred) ** 2))
 
 if __name__ == "__main__":
 
@@ -97,7 +217,10 @@ if __name__ == "__main__":
     ############### BASIC OPTION
     arg('--data_path', type=str, default='/opt/ml/data/', help='Data path를 설정할 수 있습니다.')
     arg('--saved_model_path', type=str, default='./saved_models', help='Saved Model path를 설정할 수 있습니다.')
-    arg('--model', type=str, choices=['FM', 'FFM', 'NCF', 'WDN', 'DCN', 'CNN_FM', 'DeepCoNN'],
+    arg('--model', type=str, choices=['FM', 'FFM', 'NCF', 'WDN', 'DCN', 'CNN_FM', 'DeepCoNN','XGBoost','SVD','CatBoost',
+                                      'RandomForestRegressor','ExtraTreesRegressor','HistGradientBoostingRegressor','AdaBoostRegressor','BaggingRegressor',
+                                      'GradientBoostingRegressor','IsolationForest','VotingRegressor','StackingRegressor','GaussianProcessRegressor','LinearRegression',
+                                      'SGDRegressor','ARDRegression','BayesianRidge','DecisionTreeRegressor','ExtraTreeRegressor'],
                                 help='학습 및 예측할 모델을 선택할 수 있습니다.')
     arg('--data_shuffle', type=bool, default=True, help='데이터 셔플 여부를 조정할 수 있습니다.')
     arg('--test_size', type=float, default=0.2, help='Train/Valid split 비율을 조정할 수 있습니다.')
@@ -141,6 +264,12 @@ if __name__ == "__main__":
     arg('--kernel_size', type=int, default=3, help='DEEP_CONN에서 1D conv의 kernel 크기를 조정할 수 있습니다.')
     arg('--word_dim', type=int, default=768, help='DEEP_CONN에서 1D conv의 입력 크기를 조정할 수 있습니다.')
     arg('--out_dim', type=int, default=32, help='DEEP_CONN에서 1D conv의 출력 크기를 조정할 수 있습니다.')
+
+    ############### XGBoost
+    arg('--max_depth', type=int, default=6, help='Xgboost에서 트리의 최대 깊이를 설정')
+    arg('--eta', type=int, default=0.3, help='Xgboost에서의 학습률로 클수록 과적합 가능성이 높음.')
+    arg('--num_boost_around', type=int, default=10, help='학습에 사용될 weak learner의 반복 수')
+    arg('--min_child_weight', type=int, default=1, help='leaf node에 포함되는 최소 관측치의 수로 작을 수록 과적합 가능성 높음')
 
 
     args = parser.parse_args()

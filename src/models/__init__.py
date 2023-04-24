@@ -4,5 +4,6 @@ from .NCF.NCF_model import NeuralCollaborativeFiltering
 from .WDN.WDN_model import WideAndDeepModel
 from .DCN.DCN_model import DeepCrossNetworkModel
 from .CNN_FM.CNN_FM_model import CNN_FM
+from .CNN_FFM.CNN_FFM_model import CNN_FFM
 from .DeepCoNN.DeepCoNN_model import DeepCoNN
 # from .SVD.SVD_models import SingularValueDecomposition

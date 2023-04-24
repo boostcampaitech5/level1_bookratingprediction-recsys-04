@@ -19,7 +19,7 @@ def main(args):
         data = context_data_load(args)
     elif args.model in ('NCF', 'WDN', 'DCN'):
         data = dl_data_load(args)
-    elif args.model == 'CNN_FM':
+    elif args.model in ('CNN_FM','CNN_FFM'):
         data = image_data_load(args)
     elif args.model == 'DeepCoNN':
         import nltk
@@ -39,7 +39,7 @@ def main(args):
         data = dl_data_split(args, data)
         data = dl_data_loader(args, data)
 
-    elif args.model=='CNN_FM':
+    elif args.model in ('CNN_FM','CNN_FFM'):
         data = image_data_split(args, data)
         data = image_data_loader(args, data)
 
@@ -77,7 +77,7 @@ def main(args):
     ######################## SAVE PREDICT
     print(f'--------------- SAVE {args.model} PREDICT ---------------')
     submission = pd.read_csv(args.data_path + 'sample_submission.csv')
-    if args.model in ('FM', 'FFM', 'NCF', 'WDN', 'DCN', 'CNN_FM', 'DeepCoNN'):
+    if args.model in ('FM', 'FFM', 'NCF', 'WDN', 'DCN', 'CNN_FM', 'CNN_FFM', 'DeepCoNN'):
         submission['rating'] = predicts
     else:
         pass
@@ -97,7 +97,7 @@ if __name__ == "__main__":
     ############### BASIC OPTION
     arg('--data_path', type=str, default='/opt/ml/data/', help='Data path를 설정할 수 있습니다.')
     arg('--saved_model_path', type=str, default='./saved_models', help='Saved Model path를 설정할 수 있습니다.')
-    arg('--model', type=str, choices=['FM', 'FFM', 'NCF', 'WDN', 'DCN', 'CNN_FM', 'DeepCoNN'],
+    arg('--model', type=str, choices=['FM', 'FFM', 'NCF', 'WDN', 'DCN', 'CNN_FM', 'CNN_FFM', 'DeepCoNN'],
                                 help='학습 및 예측할 모델을 선택할 수 있습니다.')
     arg('--data_shuffle', type=bool, default=True, help='데이터 셔플 여부를 조정할 수 있습니다.')
     arg('--test_size', type=float, default=0.2, help='Train/Valid split 비율을 조정할 수 있습니다.')
@@ -128,9 +128,9 @@ if __name__ == "__main__":
     arg('--num_layers', type=int, default=3, help='에서 Cross Network의 레이어 수를 조정할 수 있습니다.')
 
 
-    ############### CNN_FM
-    arg('--cnn_embed_dim', type=int, default=64, help='CNN_FM에서 user와 item에 대한 embedding시킬 차원을 조정할 수 있습니다.')
-    arg('--cnn_latent_dim', type=int, default=12, help='CNN_FM에서 user/item/image에 대한 latent 차원을 조정할 수 있습니다.')
+    ############### CNN_FM, CNN_FFM
+    arg('--cnn_embed_dim', type=int, default=32, help='CNN_FM, CNN_FFM에서 user와 item에 대한 embedding시킬 차원을 조정할 수 있습니다.')
+    arg('--cnn_latent_dim', type=int, default=12, help='CNN_FM, CNN_FFM에서 user/item/image에 대한 latent 차원을 조정할 수 있습니다.')
 
 
     ############### DeepCoNN

@@ -46,10 +46,12 @@ def models_load(args, data):
         model = DeepCrossNetworkModel(args, data).to(args.device)
     elif args.model=='CNN_FM':
         model = CNN_FM(args, data).to(args.device)
+    elif args.model=='CNN_FFM':
+        model = CNN_FFM(args, data).to(args.device)
     elif args.model=='DeepCoNN':
         model = DeepCoNN(args, data).to(args.device)
     else:
-        raise ValueError('MODEL is not exist : select model in [FM,FFM,NCF,WDN,DCN,CNN_FM,DeepCoNN]')
+        raise ValueError('MODEL is not exist : select model in [FM,FFM,NCF,WDN,DCN,CNN_FM,CNN_FFM,DeepCoNN]')
     return model
 
 
